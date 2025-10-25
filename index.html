@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat Bot – Wybierz Odpowiedź</title>
+<style>
+  body {
+    font-family: "Segoe UI", sans-serif;
+    background: #e6ecf7;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  .chat-container {
+    background: white;
+    width: 380px;
+    height: 560px;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .chat-box {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  .message {
+    margin: 8px 0;
+    padding: 10px 14px;
+    border-radius: 14px;
+    max-width: 80%;
+    line-height: 1.4;
+  }
+  .bot {
+    background: #e4e9ff;
+    align-self: flex-start;
+  }
+  .user {
+    background: #c9f7c1;
+    align-self: flex-end;
+  }
+  .typing {
+    background: #e4e9ff;
+    align-self: flex-start;
+    font-style: italic;
+    opacity: 0.7;
+  }
+  .typing::after {
+    content: "";
+    display: inline-block;
+    width: 1em;
+    text-align: left;
+    animation: dots 1s steps(3, end) infinite;
+  }
+  @keyframes dots {
+    0% { content: ""; }
+    25% { content: "."; }
+    50% { content: ".."; }
+    100% { content: "..."; }
+  }
+  .bot.happy { background: #d8f8d8; }  
+  .bot.sad { background: #d0e4ff; }     
+  .bot.tired { background: #e0e0e0; }  
+  .bot.excited { background: #fff0b3; } 
+  .options {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+    background: #fafafa;
+  }
+  .option {
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 5px 0;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .option:hover {
+    background: #0056b3;
+  }
+</style>
+</head>
+<body>
+
+<div class="chat-container">
+  <div class="chat-box" id="chatBox">
+    <div class="message bot">Cześć! 👋 Jestem Chat Bot. Co chcesz  zrobić, dowiedzieć się lub o czym chcesz pogadać?</div>
+  </div>
+  <div class="options" id="optionsBox"></div>
+</div>
+
+<script>
+const chatBox = document.getElementById("chatBox");
+const optionsBox = document.getElementById("optionsBox");
+
+const dialog = {
+  start: {
+    options: [
+      { text: "Powiedz mi żart 😄", next: "joke" },
+      { text: "Kiedy powstałeś 🤔", next: "powstanie" },
+      { text: "Jak się masz?", next: "howAreYou" },
+      { text: "Co potrafisz?", next: "skills" },
+      { text: "Porozmawiajmy o pogodzie ☀️", next: "weather" }
+    ]
+  },
+  powstanie: {
+    bot: "Powstałem w 24.10.2025 to był 5 dzień tygodnia czyli piątek.",
+    mood: "happy",
+    options: [
+      { text: "O", next: "O" },
+      { text: "Dzięki za tą informację", next: "Dzienki" }
+    ]
+  },
+  joke: {
+    bot: "Dlaczego komputer poszedł do lekarza? Bo złapał wirusa! 😂",
+    mood: "happy",
+    options: [
+      { text: "Jeszcze jeden!", next: "joke2" },
+      { text: "Wróć do początku", next: "powrót" }
+    ]
+  },
+  joke2: {
+    bot: "Co mówi programista do kawy? 'Compile me maybe!' ☕💻",
+    mood: "happy",
+    options: [
+      { text: "Haha, niezłe 😆", next: "joke3" },
+      { text: "Dość żartów na dziś", next: "terazCo" }
+    ]
+  },
+  joke3: {
+    bot: "A ostatni: czemu programiści mylą Halloween z Bożym Narodzeniem? Bo OCT 31 = DEC 25! 🎃🎄",
+    mood: "happy",
+    options: [
+      { text: "Genialne 😂", next: "joke4" },
+      { text: "Koniec już, okej", next: "koniec" }
+    ]
+  },
+  joke4: {
+    bot: "Dlaczego programista wziął drabinę do pracy? Bo chciał osiągnąć wyższy poziom! 😄",
+    mood: "happy",
+    options: [
+      { text: "Haha, niezłe!", next: "joke5" },
+      { text: "Dość żartów", next: "terazCo" }
+    ]
+  },
+  joke5: {
+    bot: "Co mówi frontendowiec do backendowca? 'Nie martw się, wszystko będzie responsywne!' 😂",
+    mood: "happy",
+    options: [
+      { text: "Super 😂", next: "terazCo" },
+      { text: "Niech będzie", next: "science" }
+    ]
+  },
+  powrót: {
+    bot: "To nie gra 😂",
+    mood: "happy",
+    options: [
+      { text: "Ha, racja", next: "terazCo" },
+      { text: "No tak", next: "terazCo" }
+    ]
+  },
+  science: {
+    bot: "Chcesz posłuchać ciekawostki naukowej?",
+    mood: "tired",
+    options: [
+      { text: "Tak!", next: "fact1" },
+      { text: "Nie, dzięki", next: "nieChcę" }
+    ]
+  },
+  nieChcę: {
+    bot: "Każdy może czegoś nie chcieć.",
+    options: [
+      { text: "Dokładnie!", next: "terazCo" }
+    ]
+  },
+  fact1: {
+    bot: "Czy wiesz, że serce ośmiornicy znajduje się w… jej głowie? 🐙",
+    mood: "tired",
+    options: [
+      { text: "Wow!", next: "fact2" },
+      { text: "Inne ciekawostki", next: "fact3" },
+      { text: "Wróć", next: "powrót" }
+    ]
+  },
+  fact2: {
+    bot: "Ośmiornice mają trzy serca – dwa pompują krew do skrzeli, jedno do reszty ciała.",
+    mood: "tired",
+    options: [
+      { text: "Fascynujące!", next: "terazCo" },
+      { text: "Jeszcze coś", next: "fact3" }
+    ]
+  },
+  fact3: {
+    bot: "Banany są jagodami, a truskawki nie! 🍌🍓",
+    mood: "tired",
+    options: [
+      { text: "Ha, nie wiedziałem!", next: "terazCo" },
+      { text: "Jeszcze ciekawostkę", next: "fact2" }
+    ]
+  },
+  howAreYou: {
+    bot: "Mam się świetnie! Dzięki, że pytasz 😊 A Ty?",
+    options: [
+      { text: "Też dobrze!", next: "terazCo" },
+      { text: "Genialnie", next: "happy" },
+      { text: "Zmęczony", next: "tired" },
+      { text: "Słabo...", next: "sad" }
+    ]
+  },
+  happy: {
+    bot: "Super, cieszę się! 😁 Co chcesz robić dalej?",
+    mood: "happy",
+    options: [
+      { text: "Opowiedz żart", next: "joke" },
+      { text: "Cytat motywacyjny", next: "quote" },
+      { text: "Porozmawiajmy o nauce", next: "science" }
+    ]
+  },
+  tired: {
+    bot: "Oj, potrzebujesz odpoczynku skoro jesteś zmęczony/zmęczona 😴 Może kawa lub relaksująca muzyka?",
+    mood: "excited",
+    options: [
+      { text: "Kawka!", next: "coffee" },
+      { text: "Muzyka", next: "music" },
+      { text: "Nie, dzięki", next: "naPewno" }
+    ]
+  },
+  music: {
+    bot: "Polecam coś relaksującego, np. chillwave lub lo-fi 🎶",
+    options: [
+      { text: "Super, dzięki!", next: "terazCo" },
+      { text: "Możesz coś polecić?", next: "music2" }
+    ]
+  },
+  music2: {
+    bot: "Spróbuj kanałów lo-fi na YouTube – idealne do nauki i relaksu! 🎧",
+    options: [
+      { text: "Będę słuchać", next: "terazCo" },
+      { text: "Może później", next: "terazCo" },
+      { text: "Znam ale nie lubię tego", next: "NieLubię" }
+    ]
+  },
+  music3: {
+    bot: "Tak znam tą piosenkę, ma ona niektóre memy i są one nie odpowiadnie dla dzieci 😞",
+    mood: "sad",
+    options: [
+      { text: "No tak", next: "terazCo" },
+      { text: "Chciał bym się dowiedzieć więcej ale muszę iść", next: "bye" },
+      { text: "Niestety są takie złe memy", next: "terazCo" }
+    ]
+  },
+  naPewno: {
+    bot: "Na pewno?",
+    options: [
+      { text: "Tak", next: "terazCo" },
+      { text: "Nie", next: "czyliOdpoczynek" }
+    ]
+  },
+  czyliOdpoczynek: {
+    bot: "Czyli odpoczynek przy Muzyce czy Kawis?",
+    options: [
+      { text: "Kawie", next: "coffee" },
+      { text: "Muzyka", next: "music" }
+    ]
+  },
+  sad: {
+    bot: "Oj... przykro mi 😢 Pamiętaj, że po burzy zawsze wychodzi słońce ☀️ Chcesz, opowiem coś na poprawę humoru?",
+    mood: "sad",
+    options: [
+      { text: "Tak, poproszę!", next: "joke" },
+      { text: "Proszę, zmotywuj mnie", next: "quote" },
+      { text: "Nie, dzięki", next: "terazCo" }
+    ]
+  },
+  skills: {
+    bot: "Potrafię rozmawiać, dawać linki do kanałów Twitch, opowiadać żarty, motywować, a nawet mówić o pogodzie! 🌤️",
+    options: [
+      { text: "Pokaż motywujący cytat 💪", next: "quote" },
+      { text: "Opowiedz coś o pogodzie", next: "weather" },
+      { text: "Jakich znasz streamerów na twitchu", next: "Twitch" }
+    ]
+  },
+  Twitch: {
+    bot: "Różnych, do kogo chcesz link?",
+    options: [
+      { text: "Dumlix!", next: "Dumlix" },
+      { text: "Arquel", next: "Arquel" }
+    ]
+  },
+  Dumlix: {
+    bot: "https://m.twitch.tv/dumlix",
+    options: [
+      { text: "Dzięki", next: "Dzienki" },
+      { text: "Super", next: "terazCo" }
+    ]
+  },
+  Arquel: {
+    bot: "https://m.twitch.tv/arquel",
+    options: [
+      { text: "Dzięki", next: "Dzienki" },
+      { text: "Super", next: "terazCo" }
+    ]
+  },
+  quote: {
+    bot: "„Nie musisz być wielki, żeby zacząć, ale musisz zacząć, żeby być wielki.” – Zig Ziglar ✨",
+    mood: "tired",
+    options: [
+      { text: "Świetne!", next: "terazCo" },
+      { text: "Masz inny cytat?", next: "quote2" }
+    ]
+  },
+  quote2: {
+    bot: "„Sukces to suma niewielkich wysiłków powtarzanych dzień po dniu.” – Robert Collier 💫",
+    mood: "tired",
+    options: [
+      { text: "Motywujące 💪", next: "terazCo" },
+      { text: "Wystarczy na dziś", next: "koniec" }
+    ]
+  },
+  weather: {
+    bot: "Pogoda zależy od nastroju 😎 A u Ciebie dziś świeci słońce, deszcz czy może kawa?",
+    options: [
+      { text: "Słońce ☀️", next: "sunny" },
+      { text: "Pada 🌧️", next: "rainy" },
+      { text: "Pada 🌨️", next: "snow" },
+      { text: "Kawa ?", next: "coffee2" }
+    ]
+  },
+  weather2: {
+    bot: "No to wracająsz do pytania, jaka u ciebie jest pogoda?",
+    options: [
+      { text: "Słońce ☀️", next: "sunny" },
+      { text: "Pada 🌧️", next: "rainy" },
+      { text: "Pada 🌨️", next: "snow" }
+    ]
+  },
+  sunny: {
+    bot: "Idealny dzień na spacer! 🌞 Nie zapomnij okularów przeciwsłonecznych 😎",
+    options: [
+      { text: "Racja!", next: "terazCo" },
+      { text: "A co gdyby padało?", next: "rainy" }
+    ]
+  },
+  rainy: {
+    bot: "Deszcz to dobra wymówka, żeby zostać w domu z kubkiem herbaty ☕ i dobrą muzyką 🎧",
+    options: [
+      { text: "Zgadzam się!", next: "terazCo" },
+      { text: "Wolę kawę", next: "coffee" }
+    ]
+  },
+  snow: {
+    bot: "Pada śnieg, pada śnieg dzwonią dzwonki sań",
+    options: [
+      { text: "Dokładnie", next: "terazCo" },
+      { text: "Znasz tą piosenkę?", next: "music3" }
+    ]
+  },
+  Isigma: {
+    bot: "Wiem o tym 😎",
+    mood: "happy",
+    options: [
+      { text: "No i super", next: "terazCo" },
+      { text: "O", next: "O" }
+    ]
+  },
+  O: {
+    bot: "Widzisz? Dużo żeszy wiem 😉",
+    options: [
+      { text: "Fakt 😄", next: "terazCo" }
+    ]
+  },
+  WięcejNiż15: {
+    bot: "Czyli Możesz pić kawę, Super",
+    mood: "happy",
+    options: [
+      { text: "Tak", next: "terazCo" },
+      { text: "Nie", next: "nie" }
+    ]
+  },
+  nie: {
+    bot: "Dlaczego nie?",
+    options: [
+      { text: "Bo mam ataki padaczki 😓", next: "Padaczka" },
+      { text: "Bo nie lubię", next: "NieLubię" }
+    ]
+  },
+  Padaczka: {
+    bot: "Padaczka, czyli epilepsja, to przewlekła choroba neurologiczna charakteryzująca się nawracającymi napadami padaczkowymi, które są wynikiem nieprawidłowych i nadmiernych wyładowań elektrycznych w mózgu. Napady mogą objawiać się różnie: od drgawek z utratą świadomości, po krótsze epizody zaburzeń świadomości lub odczuć. Choć padaczka jest nieuleczalna, napady można kontrolować za pomocą farmakoterapii, a diagnoza opiera się głównie na elektroencefalogramie. Ale to nie jest powód do załamywania się 😉",
+    mood: "sad",
+    options: [
+      { text: "Dzięki", next: "Dzienki" },
+      { text: "Dobrze wiedzieć", next: "GoodInfo" }
+    ]
+  },
+  NieLubię: {
+    bot: "Każdy na prawo czegoś nie lubić ☺️",
+    options: [
+      { text: "To prawda", next: "terazCo" },
+      { text: "No właśnie", next: "terazCo" }
+    ]
+  },
+  GoodInfo: {
+    bot: "Widzisz? Nie tylko rozmawiam ale i uczę 😁",
+    mood: "happy",
+    options: [
+      { text: "To prawda", next: "terazCo" },
+      { text: "Widać", next: "widać" }
+    ]
+  },
+  widać: {
+    bot: "Chcesz się czegoś jeszcze dowiedzieć ?",
+    options: [
+      { text: "Nie dzięki", next: "Dzienki" },
+      { text: "Porozmawiajmy", next: "terazCo" },
+      { text: "Tak", next: "dowiedzieć" }
+    ]
+  },
+  matematyka: {
+    bot: "O czym chciał byś wiedzieć?",
+    options: [
+      { text: "2 + 2 * 2", next: "6" },
+      { text: "3 + 3 * 3", next: "15" },
+      { text: "4 + 4 * 4", next: "20" },
+      { text: "Jednak nie", next: "Dzienki2" }
+    ]
+  },
+  6: {
+    bot: "To 6",
+    options: [
+      { text: "Okej", next: "Jeszcze" },
+      { text: "Co oznacza ta liczba", next: "Oznacza6" },
+      { text: "O", next: "O" }
+    ]
+  },
+  15: {
+    bot: "To 15",
+    options: [
+      { text: "Okej", next: "Jeszcze" }
+    ]
+  },
+  20: {
+    bot: "To 20",
+    options: [
+      { text: "Okej", next: "Jeszcze" }
+    ]
+  },
+  dowiedzieć: {
+    bot: "O fajnie, to którą żesz wybierasz z której chciałbyś się czegoś dowiedzieć czegoś? ",
+    options: [
+      { text: "Jednak o niczym", next: "Dzienki2" },
+      { text: "O chemi", next: "Chemia" },
+      { text: "O matematycze", next: "matematyka" }
+    ]
+  },
+  dowiedzieć2: {
+    bot: "Jasne 🙂 a o czym?",
+    options: [
+      { text: "Jednak o niczym", next: "Dzienki2" },
+      { text: "O chemi", next: "Chemia" },
+      { text: "O matematycze", next: "matematyka" }
+    ]
+  },
+  Oznacza5: {
+    bot: "Liczba 5 ma wiele znaczeń, ale najczęściej kojarzy się z wolnością, przygodą i zmianą. W numerologii jest symbolem dynamicznych i ciekawych świata osób. Symbolika 5 odnosi się też do ludzkiego ciała (pięć zmysłów, palców), a w kontekście religijnym do Bożej łaski i dobroci. ",
+    options: [
+      { text: "Wow", next: "Jeszcze" },
+      { text: "Nieźle", next: "Jeszcze" },
+      { text: "O", next: "O" }
+    ]
+  },
+  Oznacza6: {
+    bot: "Liczba 6 ma różne znaczenia, w numerologii symbolizuje miłość, harmonię, odpowiedzialność i opiekuńczość, często jest kojarzona z troską o innych oraz równowagą życiową",
+    options: [
+      { text: "Wow", next: "Jeszcze" },
+      { text: "Nieźle", next: "Jeszcze" },
+      { text: "O", next: "O" }
+    ]
+  },
+  Chemia: {
+    bot: "Okej lecimy z chemią 😎",
+    options: [
+      { text: "Co to H2O", next: "woda" },
+      { text: "Co to HNO3", next: "kwasAzotowy5" },
+      { text: "Co to CH4", next: "metan" },
+      { text: "Jednak nie", next: "Dzienki2" }
+    ]
+  },
+  Jeszcze: {
+    bot: "Chcesz o czymś jeszcze?",
+    options: [
+      { text: "Tak po proszę", next: "dowiedzieć" },
+      { text: "Nie dzięki", next: "Dzienki" }
+    ]
+  },
+  woda: {
+    bot: "Woda",
+    options: [
+      { text: "Okej", next: "Jeszcze" }
+    ]
+  },
+  kwasAzotowy5: {
+    bot: "Kwas Azotowy V",
+    options: [
+      { text: "Okej", next: "Jeszcze" },
+      { text: "?", next: "kwasAzotowyV" }
+    ]
+  },
+  kwasAzotowyV: {
+    bot: "V to inaczej 5 😄",
+    options: [
+      { text: "Aaaaaa", next: "Jeszcze" },
+      { text: "okej", next: "Jeszcze" }
+    ]
+  },
+  metan: {
+    bot: "Metan",
+    options: [
+      { text: "Okej", next: "Jeszcze" }
+    ]
+  },
+  terazCo: {
+    bot: "To co teraz? O czym gadamy lub dowiadujemy się?",
+    options: [
+      { text: "O matematyce", next: "matematyka" },
+      { text: "O pogodzie", next: "weather" },
+      { text: "O liczbach", next: "liczby" },
+      { text: "O chemi", next: "Chemia" },
+      { text: "Powiedz mi żart proszę", next: "joke" },
+      { text: "Kiedy powstałeś 🤔", next: "powstanie" },
+      { text: "Jak się masz?", next: "howAreYou" },
+      { text: "Muszę iść już", next: "bye2" },
+      { text: "Jesteś Sigma", next: "Isigma" }
+    ]
+  },
+  liczby: {
+    bot: "Okej to o jakich liczbach?",
+    options: [
+      { text: "5", next: "Oznacza5" },
+      { text: "6", next: "Oznacza6" }
+    ]
+  },
+  Dzienki: {
+    bot: "Nie ma sprawy, jak coś jeszcze chcesz to mów 😉",
+    options: [
+      { text: "Jasne będę pamiętał", next: "terazCo" },
+      { text: "Mógł bym jeszcze się o czymś dowiedzieć?", next: "dowiedzieć2" },
+      { text: "Dobrze ale muszę już iść", next: "bye2" }
+    ]
+  },
+  Dzienki2: {
+    bot: "Każdy może zmienić zdanie 😉",
+    options: [
+      { text: "To prawda", next: "terazCo" },
+      { text: "Tak. Muszę już iść", next: "bye2" }
+    ]
+  },
+  MniejNiż15: {
+    bot: "Czyli jeszcze nie możesz pić kawy, ale spokojnie, Kawa to nie życie co nie?",
+    options: [
+      { text: "Masz Rację", next: "terazCo" },
+      { text: "No nie wydaje mi się", next: "kawaWszystko" }
+    ]
+  },
+  Piję: {
+    bot: "To proszę przestań bo szkodzisz sobie",
+    options: [
+      { text: "Masz Rację", next: "terazCo" },
+      { text: "No okej", next: "terazCo" }
+    ]
+  },
+  życieKawy: {
+    bot: "He, może tak może nie, nie wiem 😉",
+    mood: "happy",
+    options: [
+      { text: "Okej", next: "terazCo" }
+    ]
+  },
+  koniec: {
+    bot: "koniec rozmowy ?",
+    options: [
+      { text: "Tak", next: "bye2" },
+      { text: "Tak bo muszę już iść", next: "bye2" },
+      { text: "Jeszcze nie", next: "Aaa" }
+    ]
+  },
+  Aaa: {
+    bot: "Aaaaaaa bo już myślałem że chcesz skończyć rozmowę 😆",
+    options: [
+      { text: "He", next: "terazCo" },
+      { text: "To nie źle", next: "terazCo" }
+    ]
+  },
+  kawaWszystko: {
+    bot: "Aha, Czyli ty pijesz kawę? Czy chodziło ci że kawa to życie",
+    options: [
+      { text: "Piję", next: "Piję" },
+      { text: "To że kawa jest życiem", next: "życieKawy" }
+    ]
+  },
+  coffee: {
+    bot: "Kawa to zawsze dobry pomysł ☕💡 Nawet boty to wiedzą! Pamiętaj tylko że gdy masz 15/16 lat to możesz pić jasne?",
+    options: [
+      { text: "Haha, racja!", next: "terazCo" },
+      { text: "Jasne ja mam więcej niż 15", next: "WięcejNiż15" },
+      { text: "Jasne ja mam mniej niż 15", next: "MniejNiż15" },
+      { text: "Do zobaczenia bo idę się napić kawy", next: "bye2" }
+    ]
+  },
+  coffee2: {
+    bot: "A tak po prostu zapytałem 😁",
+    options: [
+      { text: "A, okej", next: "weather2" },
+      { text: "W szumie napił bym się kawy", next: "coffee" }
+    ]
+  },
+  bye2: {
+    bot: "No to do zobaczenia! 👋 Miłego dzionka!",
+    options: []
+  },
+  bye: {
+    bot: "Do zobaczenia! 👋 Miłego dnia!",
+    options: []
+  }
+};
+
+function showOptions(state) {
+  optionsBox.innerHTML = "";
+  const step = dialog[state];
+
+  if (step.bot) {
+    // Dodaj wiadomość z animacją "Piszę..."
+    const typingMsg = document.createElement("div");
+    typingMsg.className = "message typing";
+    typingMsg.textContent = "Piszę";
+    chatBox.appendChild(typingMsg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Po chwili usuń i pokaż faktyczną wiadomość
+    setTimeout(() => {
+      chatBox.removeChild(typingMsg);
+      typeMessage(step.bot, "bot");
+    }, 1000);
+  }
+
+  // Pokaż opcje po chwili (gdy wiadomość już się pojawi)
+  setTimeout(() => {
+    step.options.forEach(opt => {
+      const btn = document.createElement("button");
+      btn.className = "option";
+      btn.textContent = opt.text;
+      btn.onclick = () => chooseOption(opt);
+      optionsBox.appendChild(btn);
+    });
+  }, 1400);
+}
+
+function chooseOption(opt) {
+  addMessage(opt.text, "user");
+  optionsBox.innerHTML = "";
+  setTimeout(() => {
+    showOptions(opt.next);
+  }, 600); // troszkę dłuższe, by wyglądało naturalnie
+}
+
+function typeMessage(text, sender, mood = "normal") {
+  const msg = document.createElement("div");
+  msg.className = `message ${sender}`;
+  
+  if (sender === "bot" && mood !== "normal") {
+    msg.classList.add(mood);
+  }
+
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  let i = 0;
+  const speed = 30;
+  const typing = setInterval(() => {
+    msg.textContent = text.slice(0, i);
+    i++;
+    if (i > text.length) {
+      clearInterval(typing);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  }, speed);
+}
+
+function addMessage(text, sender) {
+  const msg = document.createElement("div");
+  msg.className = `message ${sender}`;
+  msg.textContent = text;
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// Start rozmowy
+showOptions("start");
+</script>
+
+</body>
+</html>
